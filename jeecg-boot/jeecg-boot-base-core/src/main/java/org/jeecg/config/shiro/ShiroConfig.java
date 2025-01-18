@@ -1,5 +1,6 @@
 package org.jeecg.config.shiro;
 
+import com.google.common.collect.Sets;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.apache.shiro.mgt.DefaultSessionStorageEvaluator;
@@ -56,7 +57,7 @@ public class ShiroConfig {
     private JeecgBaseConfig jeecgBaseConfig;
     @Autowired(required = false)
     private RedisProperties redisProperties;
-    
+    static final String IGNORE = "anon";
     /**
      * Filter Chain定义说明
      *
@@ -70,116 +71,49 @@ public class ShiroConfig {
         shiroFilterFactoryBean.setSecurityManager(securityManager);
         // 拦截器
         Map<String, String> filterChainDefinitionMap = new LinkedHashMap<String, String>();
-
         //支持yml方式，配置拦截排除
         if(jeecgBaseConfig!=null && jeecgBaseConfig.getShiro()!=null){
             String shiroExcludeUrls = jeecgBaseConfig.getShiro().getExcludeUrls();
             if(oConvertUtils.isNotEmpty(shiroExcludeUrls)){
                 String[] permissionUrl = shiroExcludeUrls.split(",");
                 for(String url : permissionUrl){
-                    filterChainDefinitionMap.put(url,"anon");
+                    filterChainDefinitionMap.put(url,IGNORE);
                 }
             }
         }
-
+        filterChainDefinitionMap.put("/app-api/**", IGNORE);
         // 配置不会被拦截的链接 顺序判断
-        filterChainDefinitionMap.put("/sys/cas/client/validateLogin", "anon"); //cas验证登录
-        filterChainDefinitionMap.put("/sys/randomImage/**", "anon"); //登录验证码接口排除
-        filterChainDefinitionMap.put("/sys/checkCaptcha", "anon"); //登录验证码接口排除
-        filterChainDefinitionMap.put("/sys/smsCheckCaptcha", "anon"); //短信次数发送太多验证码排除
-        filterChainDefinitionMap.put("/sys/login", "anon"); //登录接口排除
-        filterChainDefinitionMap.put("/sys/mLogin", "anon"); //登录接口排除
-        filterChainDefinitionMap.put("/sys/logout", "anon"); //登出接口排除
-        filterChainDefinitionMap.put("/sys/thirdLogin/**", "anon"); //第三方登录
-        filterChainDefinitionMap.put("/sys/getEncryptedString", "anon"); //获取加密串
-        filterChainDefinitionMap.put("/sys/sms", "anon");//短信验证码
-        filterChainDefinitionMap.put("/sys/phoneLogin", "anon");//手机登录
-        filterChainDefinitionMap.put("/sys/user/checkOnlyUser", "anon");//校验用户是否存在
-        filterChainDefinitionMap.put("/sys/user/register", "anon");//用户注册
-        filterChainDefinitionMap.put("/sys/user/phoneVerification", "anon");//用户忘记密码验证手机号
-        filterChainDefinitionMap.put("/sys/user/passwordChange", "anon");//用户更改密码
-        filterChainDefinitionMap.put("/auth/2step-code", "anon");//登录验证码
-        filterChainDefinitionMap.put("/sys/common/static/**", "anon");//图片预览 &下载文件不限制token
-        filterChainDefinitionMap.put("/sys/common/pdf/**", "anon");//pdf预览
-
-        //filterChainDefinitionMap.put("/sys/common/view/**", "anon");//图片预览不限制token
-        //filterChainDefinitionMap.put("/sys/common/download/**", "anon");//文件下载不限制token
-        filterChainDefinitionMap.put("/generic/**", "anon");//pdf预览需要文件
-
-        filterChainDefinitionMap.put("/sys/getLoginQrcode/**", "anon"); //登录二维码
-        filterChainDefinitionMap.put("/sys/getQrcodeToken/**", "anon"); //监听扫码
-        filterChainDefinitionMap.put("/sys/checkAuth", "anon"); //授权接口排除
-
-
+        for (String url : WhiteList.API_SET) {
+            filterChainDefinitionMap.put(url,IGNORE);
+        }
         //update-begin--Author:scott Date:20221116 for：排除静态资源后缀
-        filterChainDefinitionMap.put("/", "anon");
-        filterChainDefinitionMap.put("/doc.html", "anon");
-        filterChainDefinitionMap.put("/**/*.js", "anon");
-        filterChainDefinitionMap.put("/**/*.css", "anon");
-        filterChainDefinitionMap.put("/**/*.html", "anon");
-        filterChainDefinitionMap.put("/**/*.svg", "anon");
-        filterChainDefinitionMap.put("/**/*.pdf", "anon");
-        filterChainDefinitionMap.put("/**/*.jpg", "anon");
-        filterChainDefinitionMap.put("/**/*.png", "anon");
-        filterChainDefinitionMap.put("/**/*.gif", "anon");
-        filterChainDefinitionMap.put("/**/*.ico", "anon");
-        filterChainDefinitionMap.put("/**/*.ttf", "anon");
-        filterChainDefinitionMap.put("/**/*.woff", "anon");
-        filterChainDefinitionMap.put("/**/*.woff2", "anon");
-        filterChainDefinitionMap.put("/**/*.glb", "anon");
-        filterChainDefinitionMap.put("/**/*.wasm", "anon");
+        for (String url : WhiteList.RES_SET) {
+            filterChainDefinitionMap.put(url,IGNORE);
+        }
         //update-end--Author:scott Date:20221116 for：排除静态资源后缀
-
-        filterChainDefinitionMap.put("/druid/**", "anon");
-        filterChainDefinitionMap.put("/swagger-ui.html", "anon");
-        filterChainDefinitionMap.put("/swagger**/**", "anon");
-        filterChainDefinitionMap.put("/webjars/**", "anon");
-        filterChainDefinitionMap.put("/v2/**", "anon");
-
+        for (String url : WhiteList.SWAGGER_ETC_SET) {
+            filterChainDefinitionMap.put(url,IGNORE);
+        }
         // update-begin--Author:sunjianlei Date:20210510 for：排除消息通告查看详情页面（用于第三方APP）
-        filterChainDefinitionMap.put("/sys/annountCement/show/**", "anon");
+        filterChainDefinitionMap.put("/sys/annountCement/show/**", IGNORE);
         // update-end--Author:sunjianlei Date:20210510 for：排除消息通告查看详情页面（用于第三方APP）
-
-        //积木报表排除
-        filterChainDefinitionMap.put("/jmreport/**", "anon");
-        filterChainDefinitionMap.put("/**/*.js.map", "anon");
-        filterChainDefinitionMap.put("/**/*.css.map", "anon");
-        
-        //积木BI大屏和仪表盘排除
-        filterChainDefinitionMap.put("/drag/view", "anon");
-        filterChainDefinitionMap.put("/drag/page/queryById", "anon");
-        filterChainDefinitionMap.put("/drag/page/addVisitsNumber", "anon");
-        filterChainDefinitionMap.put("/drag/page/queryTemplateList", "anon");
-        filterChainDefinitionMap.put("/drag/share/view/**", "anon");
-        filterChainDefinitionMap.put("/drag/onlDragDatasetHead/getAllChartData", "anon");
-        filterChainDefinitionMap.put("/drag/onlDragDatasetHead/getTotalData", "anon");
-        filterChainDefinitionMap.put("/drag/mock/json/**", "anon");
-        filterChainDefinitionMap.put("/jimubi/view", "anon");
-        filterChainDefinitionMap.put("/jimubi/share/view/**", "anon");
-
-        //大屏模板例子
-        filterChainDefinitionMap.put("/test/bigScreen/**", "anon");
-        filterChainDefinitionMap.put("/bigscreen/template1/**", "anon");
-        filterChainDefinitionMap.put("/bigscreen/template2/**", "anon");
-        //filterChainDefinitionMap.put("/test/jeecgDemo/rabbitMqClientTest/**", "anon"); //MQ测试
-        //filterChainDefinitionMap.put("/test/jeecgDemo/html", "anon"); //模板页面
-        //filterChainDefinitionMap.put("/test/jeecgDemo/redis/**", "anon"); //redis测试
-
-        //websocket排除
-        filterChainDefinitionMap.put("/websocket/**", "anon");//系统通知和公告
-        filterChainDefinitionMap.put("/newsWebsocket/**", "anon");//CMS模块
-        filterChainDefinitionMap.put("/vxeSocket/**", "anon");//JVxeTable无痕刷新示例
-
+        for (String url : WhiteList.REPORT_FORM_SET) {
+            filterChainDefinitionMap.put(url,IGNORE);
+        }
+        for (String url : WhiteList.BIT_SCREEN_SET) {
+            filterChainDefinitionMap.put(url,IGNORE);
+        }
+        for (String url : WhiteList.WS_SET) {
+            filterChainDefinitionMap.put(url,IGNORE);
+        }
         //性能监控——安全隐患泄露TOEKN（durid连接池也有）
-        //filterChainDefinitionMap.put("/actuator/**", "anon");
+        //filterChainDefinitionMap.put("/actuator/**", IGNORE);
         //测试模块排除
-        filterChainDefinitionMap.put("/test/seata/**", "anon");
-
+        filterChainDefinitionMap.put("/test/seata/**", IGNORE);
         //错误路径排除
-        filterChainDefinitionMap.put("/error", "anon");
+        filterChainDefinitionMap.put("/error", IGNORE);
         // 企业微信证书排除
-        filterChainDefinitionMap.put("/WW_verify*", "anon");
-
+        filterChainDefinitionMap.put("/WW_verify*", IGNORE);
         // 添加自己的过滤器并且取名为jwt
         Map<String, Filter> filterMap = new HashMap<String, Filter>(1);
         //如果cloudServer为空 则说明是单体 需要加载跨域配置【微服务跨域切换】
